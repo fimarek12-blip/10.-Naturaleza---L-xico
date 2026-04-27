@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Vocabulario Avanzado - Clase</title>
+    
+    <style>
+        :root { --p: #2c3e50; --a: #3498db; --bg: #f4f7f6; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: var(--bg); 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+            overflow: hidden;
+        }
+
+        .card-container { 
+            perspective: 1000px; 
+            width: 90vw; 
+            max-width: 450px; 
+            height: 300px; 
+            cursor: pointer;
+            /* Parche Safari */
+            touch-action: manipulation; 
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .card { 
+            width: 100%; 
+            height: 100%; 
+            position: relative; 
+            transition: transform 0.4s; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+            border-radius: 15px;
+            /* Parche Safari para 3D */
+            transform-style: preserve-3d;
+            -webkit-transform-style: preserve-3d;
+        }
+
+        .card.flipped { transform: rotateY(180deg); }
+
+        .face { 
+            position: absolute; 
+            width: 100%; 
+            height: 100%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 25px; 
+            box-sizing: border-box; 
+            border-radius: 15px; 
+            text-align: center; 
+            font-size: 1.4rem;
+            /* Parche Safari para ocultar la cara trasera */
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+
+        .front { background: white; color: var(--p); font-weight: bold; border: 2px solid #ddd; }
+        .back { background: var(--a); color: white; transform: rotateY(180deg); font-size: 1.2rem; }
+
+        .controls { 
+            margin-top: 30px; 
+            display: flex; 
+            gap: 10px; 
+            width: 90vw; 
+            max-width: 450px;
+        }
+
+        button { 
+            flex: 1;
+            padding: 18px 10px; 
+            border: none; 
+            border-radius: 12px; 
+            background: var(--p); 
+            color: white; 
+            font-size: 1rem; 
+            font-weight: bold;
+            touch-action: manipulation;
+        }
+
+        .info { margin-top: 15px; font-weight: bold; color: #7f8c8d; }
+
+        /* Ajustes específicos para móviles muy pequeños */
+        @media (max-height: 600px) {
+            .card-container { height: 220px; }
+            .face { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card-container" onclick="flip()">
+        <div class="card" id="c">
+            <div class="face front" id="q">Cargando...</div>
+            <div class="face back" id="a">...</div>
+        </div>
+    </div>
+
+    <div class="info" id="status">0 / 0</div>
+
+    <div class="controls">
+        <button onclick="prev()">⬅ Ant.</button>
+        <button onclick="shuffle()">🔀 Mezclar</button>
+        <button onclick="next()">Sig. ➡</button>
+    </div>
+
+<script>
+    const data = [
+        {q: "vegetal, m.", a: "zelenina"},
+	{q: "alga, f.", a: "řasy"},
+	{q: "champiñón, m., níscalo, m.", a: "žampión, ryzec pravý"},
+	{q: "liquen, m., musgo, m.", a: "lišejník, mech"},
+	{q: "helecho, m.,", a: "kapraďorost"},
+	{q: "planta, f., flor, f.", a: "rostlina, květina"},
+	{q: "raíz, f., tallo, m., espina, f., hoja, f.", a: "kořen, stonek, trn, list"},
+	{q: "corola, f., pétalo, m., estambre, m., pistilo, m.", a: "koruna květu, okvětní lístek, tyčinka, pestík"},
+	{q: "botón, m. floral", a: "pupen"},
+	{q: "capullo, m. /yema, f./pimpollo, m.", a: "poupě"},
+	{q: "arbusto, m., matorral, m.", a: "keř, křovinná vegetace"},
+	{q: "mata, f., matojo, m.", a: "keř, keřík"},
+	{q: "árbol, m.", a: "strom"},
+	{q: "tronco, m., copa, f.", a: "kmen, koruna"},
+	{q: "*tronco, m.", a: "kamarád, blízký (hovorově)"},
+	{q: "rama, f.", a: "větev"},
+	{q: "hoja, f., follaje, m., frondosidad, f.", a: "list, listí, bujnost"},
+	{q: "herbario, m. x herbolario, m.", a: "herbář x bylinkář/ka, bylinkářství"},
+	{q: "fruta, f. x fruto, m.", a: "ovoce (hovorový pojem) x ovoce/plod (botanický pojem)"},
+	{q: "planta, f. silvestre x cultivada,", a: "divoce rostoucí x člověkem pěstovaná rostlina"},
+	{q: "planta de interior x de exterior", a: "vnitřní x venkovní rostlina"},
+	{q: "brezo, m.", a: "vřes"},
+	{q: "trébol, m.", a: "jetel"},
+	{q: "azafrán, m., tomillo, m.", a: "šafrán, tymián"},
+	{q: "lavanda, f./espliego, m., romero, m.", a: "levandule, rozmarýn"},
+	{q: "orégano, m., tomillo, m., laurel, m., hierbabuena, f.", a: "oregano, tymián, vavřín (bobkový list), máta peprná"},
+	{q: "té, m., manzanilla, f.", a: "heřmánkový čaj"},
+	{q: "albahaca, f., grama, f.", a: "bazalka, troskut prstnatý"},
+	{q: "campanilla, f./campánula, f., violeta, f.", a: "zvonek, fialka"},
+	{q: "prímula, f., anémona, f., lirio, m. de los valles, nomeolvides, m.", a: "prvosenka (petrklíč), sasanka, konvalinka vonná, pomněnka"},
+	{q: "diente, m. de león", a: "smetánka lékařská (pampeliška)"},
+	{q: "pensamiento, m., margarita, f., amapola, f., alhelí, m. jacinto, m.,", a: "violka trojbarevná, sedmikráska chudobka, mák vlčí, chejr vonný, hyacint"},
+	{q: "narciso, m., iris, m., lirio, m.", a: "narcis, kosatec, lilie"},
+	{q: "clavel, m., rosa, f. (silvestre), gladiolo, m., girasol, m. cactus, m.,", a: "hvozdík zahradní, (divoká) růže, mečík, slunečnice, kaktus"},
+	{q: "chumbera, f., espadaña, f.", a: "opuncie mexická, orobinec úzkolistý"},
+	{q: "geranio, m., petunia, f.", a: "kakost, petůnie"},
+	{q: "nenúfar, m.", a: "leknín"},
+	{q: "hierba, f.", a: "bylina"},
+	{q: "hierba mala, f./maleza, f.", a: "plevel"},
+	{q: "cardo, m., cardo, m. borriquero, ortiga, f.", a: "bodlák, ostropes trubil, kopřiva"},
+	{q: "árbol, m. frutal, de hoja caduca, de hoja perenne", a: "ovocný, opadavý, neopadavý strom"},
+	{q: "conífero, m./conífera f.", a: "jehličnany"},
+	{q: "piña, f./cono, m.", a: "šiška"},
+	{q: "aguja, f., resina, f.", a: "jehlice, míza"},
+	{q: "pino, m., abeto, m., cedro, m.", a: "borovice, jedle, cedr"},
+	{q: "acebo, m., abedul, m.", a: "cesmína ostrolistá, bříza"},
+	{q: "espino, m.", a: "hloh jednosemenný"},
+	{q: "encina, f, bellota, f.", a: "dub cesmínovitý, žalud"},
+	{q: "roble, m.", a: "buk"},
+	{q: "fresno, m., haya, f., olmo, m., plátano, m.", a: "jasan, buk lesní, jilm, platan"},
+	{q: "álamo, m., taray, m., sauce, m., tilo, m. x tila, f.", a: "topol, tamaryšek, vrba, strom lípy x rostlinka lípy"},
+	{q: "alerce, m.", a: "modřín opadavý"},
+	{q: "almendro, m., almendra, f.", a: "mandloň, mandle"},
+	{q: "manzano, m., peral, m., plátano, m./banano, m.", a: "jabloň, hrušeň, banánovník"},
+	{q: "naranjo, m., limonero, m.", a: "pomerančovík čínský, citrus limonový"},
+	{q: "melocotonero, m., níspero, m., nogal, m., higuera, f.", a: "broskvoň obecná, mišpule obecná, ořešák královský, fíkovník smokvoň"},
+	{q: "castaño, m.", a: "jírovec maďal (kaštanovník)"},
+	{q: "muérdago, m.", a: "jmelí"},
+	{q: "echar brotes/brotar, florecer, abrirse", a: "vyrůst nové větve"},
+	{q: "amarillear, marchitarse, deshojarse", a: "zežloutnout, uschnout, shodit listí"},
+	{q: "talar, repoblar/replantar, sembrar", a: "kácet, znovu zasadit, zasít"},
+	{q: "deforestar, deforestación, f.", a: "odlesňovat, odlesňování"},
+	{q: "injertar, injerto, m.", a: "štěpovat, štěpování"},
+	{q: "animal, m., doméstico x salvaje,", a: "domácí x divoké zvíře"},
+	{q: "dañino, parásito, casero, venenoso, inofensivo,", a: "škůdce, parazit, domácí, jedovatý, neškodný"},
+	{q: "carnívoro, herbívoro, insectívoro, omnívoro, mamífero,", a: "masožravec, býložravec, hmyzožravec, všežravec, savec"},
+	{q: "carroñero, acuático", a: "mrchožrout, vodní"},
+	{q: "aparearse, parir", a: "pářit se"},
+	{q: "mamar, alimentar", a: "starat se, krmit"},
+	{q: "empollar, criar, cría, f.", a: "sedět na vejcích, vychovávat, mládě"},
+	{q: "célula, f. animal", a: "buňka, zvíře"},
+	{q: "animal, m. unicelular x pluricelular", a: "jednobuňečný x mnohobuňečný organismus"},
+	{q: "protozoo, m., cuerpo, m. microscópico", a: "prvoci, tělo, mikroskopický"},
+	{q: "ameba, f., esponja, f.", a: "ameba, houba"},
+	{q: "invertebrado, m. x vertebrado, m.", a: "bezobratlí x obratlovci"},
+	{q: "celentéreo, m, cefalópodo, m.", a: "láčkovci, hlavonožci"},
+	{q: "medusa, f., tentáculo, m.", a: "medúza, chapadlo"},
+	{q: "equinodermo, m., estrella, f., de mar,", a: "ostnokožci, mořská hvězdice"},
+	{q: "caballo, m./caballito, m. de mar, pulpo, m., erizo, m. de mar", a: "mořský koník, chobotnice, mořský ježek"},
+	{q: "gusano, m. marino x terrestre", a: "mořský x suchozemský červ"},
+	{q: "lombriz, f., oruga, f., larva, f., anillo, m.", a: "žížala obecná, larva, housenka"},
+	{q: "molusco, m., crustáceo, m.", a: "měkkýši, korýši"},
+	{q: "caracol, m., concha, f., cangrejo, m.", a: "plž, mušle, krab"},
+	{q: "caparazón, m.", a: "krunýř"},
+	{q: "artrópodo, m., insecto, m., arácnido, m., miriápodo, m.", a: "členovci, hmyz, pavoukovci, stonožkovci"},
+	{q: "cuerpo, m., ala, f., pata, f., pico, m., antena, f., tentáculo, m., pelo, m., huevo, m., larva, f.", a: "tělo, křídlo, tlapa, zobák, tykadlo, chapadlo, srst, vejce, larva"},
+	{q: "mosca, f., mosquito, m., libélula, f.", a: "moucha, komár, šídlo"},
+	{q: "avispa, f.", a: "vosa"},
+	{q: "abeja, f., abejorro, m.,", a: "včela, čmelák"},
+	{q: "reina, f., obrera, f., zángano, m.", a: "královna, dělnice, trubec"},
+	{q: "zumbar, zumbido, m.", a: "bzučet, bzučení"},
+	{q: "araña, f., cucaracha, f., mariposa, f.", a: "pavouk, šváb, motýl"},
+	{q: "saltamontes, m., grillo, m.", a: "saranče, cvrček"},
+	{q: "chirriar, chirrido, m. cantar, sonar", a: "cvrček, cvičení, zpívat, znít"},
+	{q: "mariquita, f., escarabajo, m., hormiga, f.", a: "slunéčko sedmitečné (beruška), brouk, mravenec"},
+	{q: "vertebrado, m.", a: "obratlovec"},
+	{q: "pez, m., pescado, m.", a: "ryba, ryby"},
+	{q: "escama, f., aleta, f., cola, f., agalla, f., hueva, f.", a: "kůže od plazů, ploutev, ocas, žábra, jikry"},
+	{q: "tiburón, m., ballena, m., delfín, m.,", a: "žralok, velryba, delfín"},
+	{q: "pez, m. espada, manta, f., raya, f.", a: "mečoun, manta obrovská, rejnok"},
+	{q: "anfibio, m., batracio, m., rana, f., sapo, m.", a: "obojživelníci, žáby (řád), žába, ropucha"},
+	{q: "croar, cantar", a: "kvákat"},
+	{q: "pata, f.", a: "tlapa"},
+	{q: "reptil, m., serpiente, f., culebra, f., víbora, f., cobra, f., áspid, m., boa, f.,", a: "plaz, had, užovka, zmije, kobra, zmije skvrnitá, hroznýš"},
+	{q: "cocodrilo, m., caimán, m.", a: "krokodýl, kajman"},
+	{q: "lagarto, m., lagartija, f., salamandra, f., camaleón, m., tortuga, f.", a: "ještěři, ještěrka, mlok, chameleón, želva"},
+	{q: "reptar, silbar, silbido, m.", a: "plížit se, pískat, pískot"},
+	{q: "pájaro, m.", a: "pták"},
+	{q: "ave, f., rapaz, nocturna, zancuda, migratoria, canora", a: "dravec, noční, brodivý, migrující, zpěvný pták"},
+	{q: "ala, f., pico, m., pluma, f., plumaje, m.", a: "křídlo, zobák, pírko, peří"},
+	{q: "cuervo, m., grajo, m., mirlo, m., cotorra, f., gorrión, m., canario, m., jilguero, m., ruiseñor, m.,", a: "krkavec, havran polní, drozd, papoušek, vrabec domácí, kanárek, stehlík obecný, slavík obecný"},
+	{q: "golondrina, f.,", a: "vlaštovka obecná"},
+	{q: "martín, m. pescador, gaviota, f., cisne, m.", a: "ledňáček říční, racek, labuť"},
+	{q: "águila, f., aguilucho, m., buitre, m., cóndor, m., alimoche, m.,", a: "orel, moták lužní, sup bělohlavý, sup mrchožravý"},
+	{q: "azor, m., gavilán, m., cernícalo, m., flamenco, m., grulla, f., garza, f., pingüino, m., pelícano, m.,", a: "jestřáb lesní, krahujec obecný, poštolka bělooká, plameňák, jeřáb antigonin, volavka bílá, tučňák, pelikán"},
+	{q: "pájaro, m. carpintero,", a: "datel"},
+	{q: "pico, m. picapinos, vencejo, m., cuco, m., tórtola, f.", a: "strakapoud velký, rorýs obecný, kukačka obecná, hrdlička divoká"},
+	{q: "papagayo, m., loro, m., tucán, m., cigüeña, f., avestruz, f.", a: "papoušek, papoušek, tukan, čáp, pštros"},
+	{q: "búho, m., mochuelo, m., lechuza, f.,", a: "sova, sýček obecný, sova pálená"},
+	{q: "empollar x empollarse, incubar", a: "sedět na vejcích x našprtat se něco, inkubovat"},
+	{q: "cloquear, cloqueo, m., piar, pío, m., cantar", a: "kvokat, kvokání, pípat, pípání, zpívat"},
+	{q: "graznar, graznido, m.", a: "krákat, krákání"},
+	{q: "mamífero, m.", a: "savec"},
+	{q: "hocico, m./morro, m., lomo, m.", a: "čenich, hřbet"},
+	{q: "cuerno, m., asta, f.", a: "rohy, parohy"},
+	{q: "pata, f. delantera, trasera", a: "přední, zadní tlapy"},
+	{q: "casco, m., uña, f., escarbar/hozar", a: "helma, nehet, škrábat"},
+	{q: "rabo, m., cola, f., pelo, m. pelaje, m., piel, f., oreja, f., bigote, m.", a: "ocas, chlup, srst, pokožka, ucho, vousy"},
+	{q: "roedor, m., rata, f., ratón, m., ardilla, f., hámster, m., marmota, f.", a: "hlodavec, krysa, myš, veverka, křeček, svišť"},
+	{q: "liebre, f., conejo, m.", a: "zajíc, králík"},
+	{q: "erizo, m., puercoespín, m., púa, f.", a: "ježek, dikobraz, bodlina"},
+	{q: "topo, m.,", a: "krtek"},
+	{q: "mapache, m., mofeta, f., comadreja, f.", a: "mýval Severí, skunk pruhovaný, lasice kolčava"},
+	{q: "armadillo, m.,", a: "pásovec"},
+	{q: "murciélago, m.", a: "netopýr"},
+	{q: "raposa, f., coyote, m., zorro, m.", a: "liška (synonymum), kojot, liška"},
+	{q: "hiena, f., lobo, m., jabalí, m.", a: "hyena, vlk, divoké prase"},
+	{q: "león, m., tigre, m., leopardo, m.", a: "lev, tygr, leopard"},
+	{q: "guepardo, m., pantera, f., puma, m.", a: "gepard, panter, puma"},
+	{q: "lince, m., gato, m. montés", a: "rys, kočka divoká"},
+	{q: "ciervo, m., reno, m., gamo, m., corzo, m.", a: "jelen, sob polární, daněk evropský, srnec obecný"},
+	{q: "gacela, f., antílope, m., muflón, m.,", a: "gazela, antilopa, muflon"},
+	{q: "camello, m., dromedario, m., llama, f., joroba, f., jirafa, f.", a: "velbloud dvouhrbý, velbloud jednohrbý, lama, hrb, žirafa"},
+	{q: "oso, m. pardo, polar, koala, m.", a: "medvěd hnědý, lední, koala"},
+	{q: "gorila, m., mono, m., chimpancé, m., orangután, m.", a: "gorila, opice, šimpanz, orangutan"},
+	{q: "caballo, m., cebra, f., asno, m., burro, m., mula, f.", a: "kůň, zebra, osel (synonymum), mula"},
+	{q: "rinoceronte, m., hipopótamo, m.,", a: "nosorožec, hroch"},
+	{q: "bisonte, m., búfalo, m.,", a: "bizon, buvol domácí"},
+	{q: "elefante, m., trompa, f., colmillo, m.", a: "slon, chobot, kel"},
+	{q: "foca, f., morsa, f., león, m. marino", a: "tuleň, mrož lední, lachtan šedý"},
+	{q: "** ser un capullo", a: "být hňup"},
+	{q: "** ser un pimpollo", a: "být jako poupě"},
+	{q: "** ser un vegetal", a: "být mrtvý a neaktivní, dívat se do blba a nevnímat"},
+	{q: "** ser mala hierba", a: "zlý plevel roste nejvýš"},
+	{q: "** Mala hierba nunca muere.", a: "Plevel hyne, ale zla nikdy."},
+	{q: "** tener una espina clavada", a: "mít z něčeho těžkou hlavu"},
+	{q: "** a flor de piel", a: "přecitlivělá osoba"},
+	{q: "** (ir) de flor en flor", a: "skákat z kvítku na kvítek, střídat velice často partnery"},
+	{q: "** echar flores", a: "skládat poklony, lichotit"},
+	{q: "** (estar) en la flor de la vida", a: "být v nejlepších letech"},
+	{q: "** ser un cardo", a: "být jako bodlák, nepříjemný"},
+	{q: "** estar más fresco que una rosa", a: "být svěží jako rybička"},
+	{q: "** ser, estar como un roble", a: "být zdravý jako buk"},
+	{q: "** sacar las castañas del fuego", a: "tahat někoho z problémů"},
+	{q: "** ser (como) una piña", a: "být jako jedna ruka"},
+	{q: "** buscar manzanas en un peral", a: "míchat jablka s hruškami"},
+	{q: "** pedir peras al olmo", a: "chtít po kohoutovi, aby snášel vejce"},
+	{q: "** ser un animal", a: "být zvíře"},
+	{q: "** ser un parásito", a: "být příživník"},
+	{q: "** los tentáculos del poder", a: "chapadla mocipánů"},
+	{q: "** ser un pulpo", a: "lepit se na někoho, sahat na lidi bez důvodu"},
+	{q: "** ser un gusano", a: "být červ"},
+	{q: "** tener un caparazón", a: "mít hroší kůži"},
+	{q: "** ser un zángano", a: "být povaleč, pecivál"},
+	{q: "** ser una hormiguita", a: "být pilný jako mravenec, včelka"},
+	{q: "** tener mala pata", a: "mít smůlu, mít pech"},
+	{q: "** lágrimas de cocodrilo", a: "krokodýlí slzy, silně vzlykat"},
+	{q: "** ser una víbora", a: "být jako zmije"},
+	{q: "** tener la lengua de una víbora", a: "mít jedovatý jazyk"},
+	{q: "** ir a paso de tortuga", a: "jít jako želva"},
+	{q: "** ser un camaleón", a: "měnit barvy jako chameleón"},
+	{q: "** cuando las ranas críen pelo", a: "až naprší a uschne"},
+	{q: "** ser una cotorra", a: "mluvit páté přes deváté"},
+	{q: "** ser un buitre", a: "být jako sup, těžit s neštěstí druhých"},
+	{q: "** Cría cuervos y te sacarán los ojos.", a: "hřát si na prsou hada"},
+	{q: "** matar dos pájaros de un tiro", a: "sabía dvě mouchy jednou ranou"},
+	{q: "** Más vale pájaro en mano que ciento volando", a: "lepší vrabec v hrsti než holub na střeše"},
+	{q: "** tener mucho morro", a: "být drzoun"},
+	{q: "** poner los cuernos", a: "nasadit někomu parohy, podvést někoho"},
+	{q: "** ser una rata", a: "být krysa"},
+	{q: "** ser una marmota", a: "spát jako dudek"},
+	{q: "** ser un lince", a: "mít oči jako rys"},
+	{q: "** no ver tres en un burro/sobre un asno", a: "být slepý jako patrona"},
+	{q: "** hacer el burro", a: "dělat vola"},	
+	{q: "** apearse del burro/asno", a: "pustit to z hlavy, uznat chybu"},
+	{q: "** ser un ratón de biblioteca", a: "být knihomol"},
+	{q: "** no es tan fiero el león como lo pintan", a: ""},
+	{q: "** llevarse la parte del león", a: "mít medvědí podíl"},
+	{q: "** ser mono/-a algo o alguien", a: "být roztomilý"},
+
+        {q: "hongo, m., seta, f.", a: "houba (obecně), houba (nadzemní část)"}
+    ];
+
+    let idx = 0;
+    const cardEl = document.getElementById('c');
+    const qEl = document.getElementById('q');
+    const aEl = document.getElementById('a');
+    const sEl = document.getElementById('status');
+
+    function update() {
+        cardEl.classList.remove('flipped');
+        setTimeout(() => {
+            qEl.innerText = data[idx].q;
+            aEl.innerText = data[idx].a;
+            sEl.innerText = `${idx + 1} / ${data.length}`;
+        }, 100);
+    }
+
+    function flip() { cardEl.classList.toggle('flipped'); }
+    function next() { if(idx < data.length - 1) { idx++; update(); } }
+    function prev() { if(idx > 0) { idx--; update(); } }
+    function shuffle() {
+        data.sort(() => Math.random() - 0.5);
+        idx = 0;
+        update();
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if(e.code === 'ArrowRight') next();
+        if(e.code === 'ArrowLeft') prev();
+        if(e.code === 'Space') flip();
+    });
+
+    update();
+</script>
+</body>
+</html>
